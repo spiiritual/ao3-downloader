@@ -1,7 +1,14 @@
-import { expect, test, describe, beforeEach, beforeAll } from "bun:test";
-import { Work } from "../src/work";
+import {expect, test, beforeEach} from "bun:test";
+import {Work} from "../src/work";
 
 const url = "https://archiveofourown.org/works/51759202/chapters/130853899";
+const workTitle = "you have already left kudos here"
+const azw3Link = "/downloads/51759202/you_have_already_left.azw3?updated_at=1746316851"
+const epubLink = "/downloads/51759202/you_have_already_left.epub?updated_at=1746316851"
+const mobiLink = "/downloads/51759202/you_have_already_left.mobi?updated_at=1746316851"
+const pdfLink = "/downloads/51759202/you_have_already_left.pdf?updated_at=1746316851"
+const htmlLink = "/downloads/51759202/you_have_already_left.html?updated_at=1746316851"
+
 let work: Work;
 
 beforeEach(() => {
@@ -9,13 +16,13 @@ beforeEach(() => {
 })
 
 test("work starts with assigned url", () => {
-  const actual = work.url;
-  expect(actual).toBe(url);
+    const actual = work.url;
+    expect(actual).toBe(url);
 });
 
 test("work starts with no title", () => {
-  const actual = work.title;
-  expect(actual).toBeNull();
+    const actual = work.title;
+    expect(actual).toBeNull();
 });
 
 test("work starts with no azw3 link", () => {
@@ -43,18 +50,39 @@ test("work starts with no HTML link", () => {
     expect(actual).toBeNull()
 })
 
-describe("work loading tests", () => {
-    beforeAll( async () => {
-        await work.load()
-    })
-
-    test("work is able to load the title", async () => {
-        const actual = work.title;
-        expect(actual).toBe("you have already left kudos here")
-    })
-
-    test("work is able to load the az3 link", async () => {
-        const actual = work.azw3Link
-        expect(actual).toBe("/downloads/51759202/you_have_already_left.azw3?updated_at=1746316851")
-    })
+test("work is able to load the title", async() => {
+    await work.load()
+    const actual = work.title;
+    expect(actual).toBe(workTitle)
 })
+
+test("work is able to load the az3 link", async() => {
+    await work.load(["azw3"])
+    const actual = work.azw3Link;
+    expect(actual).toBe(azw3Link)
+})
+
+test("work is able to load the epub link", async() => {
+    await work.load(["epub"])
+    const actual = work.epubLink;
+    expect(actual).toBe(epubLink)
+})
+
+test("work is able to load the mobi link", async() => {
+    await work.load(["mobi"])
+    const actual = work.mobiLink;
+    expect(actual).toBe(mobiLink)
+})
+
+test("work is able to load the pdf link", async() => {
+    await work.load(["pdf"])
+    const actual = work.pdfLink;
+    expect(actual).toBe(pdfLink)
+})
+
+test("work is able to load the html link", async() => {
+    await work.load(["html"])
+    const actual = work.htmlLink;
+    expect(actual).toBe(htmlLink)
+})
+

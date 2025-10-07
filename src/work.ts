@@ -1,4 +1,3 @@
-import * as url from "node:url";
 import {parse} from 'node-html-parser';
 
 export class Work {
@@ -48,49 +47,25 @@ export class Work {
         return <string>this._epubLink;
     }
 
-    set title(value: string) {
-        this._title = value;
-    }
-
-    set azw3Link(value: string) {
-        this._azw3Link = value;
-    }
-
-    set htmlLink(value: string) {
-        this._htmlLink = value;
-    }
-
-    set pdfLink(value: string) {
-        this._pdfLink = value;
-    }
-
-    set mobiLink(value: string) {
-        this._mobiLink = value;
-    }
-
-    set epubLink(value: string) {
-        this._epubLink = value;
-    }
-
-    private extractTitleFromPage(pageContent: string): string {
+    private async extractTitleFromPage(pageContent: string): Promise<string> {
         const root = parse(pageContent);
         const titleElement = root.querySelector("div.preface.group > h2.title")
 
         if (titleElement) {
-            return titleElement.textContent.trim();
+            return Promise.resolve(titleElement.textContent.trim());
         } else {
             throw new Error("unable to find title");
         }
     }
 
-    private extractAzw3Link(pageContent: string): string {
+    private async extractAzw3LinkFromPage(pageContent: string): Promise<string> {
         const root = parse(pageContent);
         const azw3LinkElement = root.querySelector("li.download > ul > li:nth-child(1) > a")
 
         if (azw3LinkElement) {
             if (azw3LinkElement.textContent.trim() === "AZW3") {
                 if (azw3LinkElement.attributes.href) {
-                    return azw3LinkElement.attributes.href;
+                    return Promise.resolve(azw3LinkElement.attributes.href);
                 } else {
                     throw new Error("unable to find azw3 link")
                 }
@@ -101,15 +76,137 @@ export class Work {
         }
     }
 
-    async load() {
+    private async extractEpubLinkFromPage(pageContent: string): Promise<string> {
+        const root = parse(pageContent);
+        const epubLinkElement = root.querySelector("li.download > ul > li:nth-child(2) > a")
+
+        if (epubLinkElement) {
+            if (epubLinkElement.textContent.trim() === "EPUB") {
+                if (epubLinkElement.attributes.href) {
+                    return Promise.resolve(epubLinkElement.attributes.href)
+                } else {
+                    throw new Error("unable to find epub link")
+                }
+            } else {
+                throw new Error("unable to find epub link")
+            }
+        } else {
+            throw new Error("unable to find epub link")
+        }
+    }
+
+    private async extractMobiLinkFromPage(pageContent: string): Promise<string> {
+        const root = parse(pageContent);
+        const mobiLinkElement = root.querySelector("li.download > ul > li:nth-child(3) > a")
+
+        if (mobiLinkElement) {
+            if (mobiLinkElement.textContent.trim() === "MOBI") {
+                if (mobiLinkElement.attributes.href) {
+                    return Promise.resolve(mobiLinkElement.attributes.href)
+                } else {
+                    throw new Error("unable to find mobi link")
+                }
+            } else {
+                throw new Error("unable to find mobi link")
+            }
+        } else {
+            throw new Error("unable to find mobi link")
+        }
+    }
+
+    private async extractPdfLinkFromPage(pageContent: string): Promise<string> {
+        const root = parse(pageContent);
+        const pdfLinkElement = root.querySelector("li.download > ul > li:nth-child(4) > a")
+
+        if (pdfLinkElement) {
+            if (pdfLinkElement.textContent.trim() === "PDF") {
+                if (pdfLinkElement.attributes.href) {
+                    return Promise.resolve(pdfLinkElement.attributes.href)
+                } else {
+                    throw new Error("unable to find pdf link")
+                }
+            } else {
+                throw new Error("unable to find pdf link")
+            }
+        } else {
+            throw new Error("unable to find pdf link")
+        }
+    }
+
+    private async extractHtmlLinkFromPage(pageContent: string): Promise<string> {
+        const root = parse(pageContent);
+        const htmlLinkElement = root.querySelector("li.download > ul > li:nth-child(5) > a")
+
+        if (htmlLinkElement) {
+            if (htmlLinkElement.textContent.trim() === "HTML") {
+                if (htmlLinkElement.attributes.href) {
+                    return Promise.resolve(htmlLinkElement.attributes.href)
+                } else {
+                    throw new Error("unable to find html link")
+                }
+            } else {
+                throw new Error("unable to find html link")
+            }
+        } else {
+            throw new Error("unable to find html link")
+        }
+    }
+
+    async load(formats?: [string]) {
         const response = await fetch(this.url + "?" + new URLSearchParams({
             "view_adult": "true"
         }))
 
         const pageContent: string = await response.text()
 
-        this.title = this.extractTitleFromPage(pageContent);
-        this.azw3Link = this.extractAzw3Link(pageContent);
-        return
+        const fetchers: { [key: string]: Promise<string> } = {
+            title: this.extractTitleFromPage(pageContent)
+        };
+
+        formats?.forEach((formatString) => {
+            switch(formatString) {
+                case "azw3":
+                    fetchers.azw3 = this.extractAzw3LinkFromPage(pageContent);
+                    break;
+                case "epub":
+                    fetchers.epub = this.extractEpubLinkFromPage(pageContent);
+                    break;
+                case "mobi":
+                    fetchers.mobi = this.extractMobiLinkFromPage(pageContent);
+                    break;
+                case "pdf":
+                    fetchers.pdf = this.extractPdfLinkFromPage(pageContent);
+                    break;
+                case "html":
+                    fetchers.html = this.extractHtmlLinkFromPage(pageContent);
+                    break;
+            }
+        })
+
+        const results = await Promise.all(Object.values(fetchers));
+        const keys = Object.keys(fetchers);
+
+        keys.forEach((key, i) => {
+            switch(key) {
+                case "title":
+                    if (results[i]) this._title = results[i];
+                    break;
+                case "azw3":
+                    if (results[i]) this._azw3Link = results[i];
+                    break;
+                case "epub":
+                    if (results[i]) this._epubLink = results[i];
+                    break;
+                case "mobi":
+                    if (results[i]) this._mobiLink = results[i];
+                    break;
+                case "pdf":
+                    if (results[i]) this._pdfLink = results[i];
+                    break;
+                case "html":
+                    if (results[i]) this._htmlLink = results[i];
+                    break;
+            }
+        });
     }
 }
