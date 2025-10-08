@@ -1,4 +1,5 @@
 import {parse} from 'node-html-parser';
+import { Filetype, Azw3, Epub, Pdf, Mobi, Html } from './filetypes.ts'
 
 export class Work {
     private _url: string;
@@ -58,98 +59,24 @@ export class Work {
         }
     }
 
-    private async extractAzw3LinkFromPage(pageContent: string): Promise<string> {
+    private async extractDownloadLinkFromPage<T extends typeof Filetype>(pageContent: string, fileType: T): Promise<string> {
         const root = parse(pageContent);
-        const azw3LinkElement = root.querySelector("li.download > ul > li:nth-child(1) > a")
+        const linkElement = root.querySelector(fileType.cssSelector)
 
-        if (azw3LinkElement) {
-            if (azw3LinkElement.textContent.trim() === "AZW3") {
-                if (azw3LinkElement.attributes.href) {
-                    return Promise.resolve(azw3LinkElement.attributes.href);
-                } else {
-                    throw new Error("unable to find azw3 link")
-                }
-            }
-            throw new Error("unable to find azw3 link")
-        } else {
-            throw new Error("unable to find azw3 link")
+        if (!linkElement) {
+            throw new Error(`unable to find ${fileType.fileTypeName} link`);
         }
-    }
 
-    private async extractEpubLinkFromPage(pageContent: string): Promise<string> {
-        const root = parse(pageContent);
-        const epubLinkElement = root.querySelector("li.download > ul > li:nth-child(2) > a")
-
-        if (epubLinkElement) {
-            if (epubLinkElement.textContent.trim() === "EPUB") {
-                if (epubLinkElement.attributes.href) {
-                    return Promise.resolve(epubLinkElement.attributes.href)
-                } else {
-                    throw new Error("unable to find epub link")
-                }
-            } else {
-                throw new Error("unable to find epub link")
-            }
-        } else {
-            throw new Error("unable to find epub link")
+        if (linkElement.textContent.trim() !== fileType.fileTypeName) {
+            throw new Error(`unable to find ${fileType.fileTypeName} link`);
         }
-    }
 
-    private async extractMobiLinkFromPage(pageContent: string): Promise<string> {
-        const root = parse(pageContent);
-        const mobiLinkElement = root.querySelector("li.download > ul > li:nth-child(3) > a")
-
-        if (mobiLinkElement) {
-            if (mobiLinkElement.textContent.trim() === "MOBI") {
-                if (mobiLinkElement.attributes.href) {
-                    return Promise.resolve(mobiLinkElement.attributes.href)
-                } else {
-                    throw new Error("unable to find mobi link")
-                }
-            } else {
-                throw new Error("unable to find mobi link")
-            }
-        } else {
-            throw new Error("unable to find mobi link")
+        if (!linkElement.attributes.href) {
+            throw new Error(`unable to find ${fileType.fileTypeName} link`);
         }
-    }
 
-    private async extractPdfLinkFromPage(pageContent: string): Promise<string> {
-        const root = parse(pageContent);
-        const pdfLinkElement = root.querySelector("li.download > ul > li:nth-child(4) > a")
+        return Promise.resolve(linkElement.attributes.href);
 
-        if (pdfLinkElement) {
-            if (pdfLinkElement.textContent.trim() === "PDF") {
-                if (pdfLinkElement.attributes.href) {
-                    return Promise.resolve(pdfLinkElement.attributes.href)
-                } else {
-                    throw new Error("unable to find pdf link")
-                }
-            } else {
-                throw new Error("unable to find pdf link")
-            }
-        } else {
-            throw new Error("unable to find pdf link")
-        }
-    }
-
-    private async extractHtmlLinkFromPage(pageContent: string): Promise<string> {
-        const root = parse(pageContent);
-        const htmlLinkElement = root.querySelector("li.download > ul > li:nth-child(5) > a")
-
-        if (htmlLinkElement) {
-            if (htmlLinkElement.textContent.trim() === "HTML") {
-                if (htmlLinkElement.attributes.href) {
-                    return Promise.resolve(htmlLinkElement.attributes.href)
-                } else {
-                    throw new Error("unable to find html link")
-                }
-            } else {
-                throw new Error("unable to find html link")
-            }
-        } else {
-            throw new Error("unable to find html link")
-        }
     }
 
     async load(formats?: [string]) {
@@ -166,19 +93,19 @@ export class Work {
         formats?.forEach((formatString) => {
             switch(formatString) {
                 case "azw3":
-                    fetchers.azw3 = this.extractAzw3LinkFromPage(pageContent);
+                    fetchers.azw3 = this.extractDownloadLinkFromPage(pageContent, Azw3);
                     break;
                 case "epub":
-                    fetchers.epub = this.extractEpubLinkFromPage(pageContent);
+                    fetchers.epub = this.extractDownloadLinkFromPage(pageContent, Epub);
                     break;
                 case "mobi":
-                    fetchers.mobi = this.extractMobiLinkFromPage(pageContent);
+                    fetchers.mobi = this.extractDownloadLinkFromPage(pageContent, Mobi);
                     break;
                 case "pdf":
-                    fetchers.pdf = this.extractPdfLinkFromPage(pageContent);
+                    fetchers.pdf = this.extractDownloadLinkFromPage(pageContent, Pdf);
                     break;
                 case "html":
-                    fetchers.html = this.extractHtmlLinkFromPage(pageContent);
+                    fetchers.html = this.extractDownloadLinkFromPage(pageContent, Html);
                     break;
             }
         })
